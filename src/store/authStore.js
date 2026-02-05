@@ -3,7 +3,7 @@ import { login as apiLogin, register as apiRegister, getMe } from '../services/a
 import signalRService from '../services/signalr';
 
 // Глобальное хранилище для авторизации
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set) => ({
   // Состояние
   user: null,
   token: localStorage.getItem('token') || null,
@@ -110,7 +110,7 @@ const useAuthStore = create((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
       });
-    } catch (error) {
+    } catch {
       localStorage.removeItem('token');
       set({
         user: null,
