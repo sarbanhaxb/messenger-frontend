@@ -1,12 +1,16 @@
-import { create } from 'zustand';
-import { login as apiLogin, register as apiRegister, getMe } from '../services/api';
-import signalRService from '../services/signalr';
+import { create } from "zustand";
+import {
+  login as apiLogin,
+  register as apiRegister,
+  getMe,
+} from "../services/api";
+import signalRService from "../services/signalr";
 
 // Глобальное хранилище для авторизации
 const useAuthStore = create((set) => ({
   // Состояние
   user: null,
-  token: localStorage.getItem('token') || null,
+  token: localStorage.getItem("token") || null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -16,25 +20,25 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await apiRegister(name, email, password);
-      
+
       // Сохраняем токен
-      localStorage.setItem('token', data.token);
-      
+      localStorage.setItem("token", data.token);
+
       // Подключаемся к SignalR
       signalRService.createConnection(data.token);
       await signalRService.start();
-      
+
       set({
         user: data.user,
         token: data.token,
         isAuthenticated: true,
         isLoading: false,
       });
-      
+
       return { success: true };
     } catch (error) {
       set({
-        error: error.response?.data?.message || 'Ошибка регистрации',
+        error: error.response?.data?.message || "Ошибка регистрации",
         isLoading: false,
       });
       return {
@@ -44,29 +48,29 @@ const useAuthStore = create((set) => ({
     }
   },
 
-  //  ВХОД 
+  //  ВХОД
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
       const data = await apiLogin(email, password);
-      
-      localStorage.setItem('token', data.token);
-      
+
+      localStorage.setItem("token", data.token);
+
       // Подключаемся к SignalR
       signalRService.createConnection(data.token);
       await signalRService.start();
-      
+
       set({
         user: data.user,
         token: data.token,
         isAuthenticated: true,
         isLoading: false,
       });
-      
+
       return { success: true };
     } catch (error) {
       set({
-        error: error.response?.data?.message || 'Ошибка входа',
+        error: error.response?.data?.message || "Ошибка входа",
         isLoading: false,
       });
       return {
@@ -76,12 +80,12 @@ const useAuthStore = create((set) => ({
     }
   },
 
-  //  ВЫХОД 
+  //  ВЫХОД
   logout: async () => {
     // Отключаемся от SignalR
     await signalRService.stop();
-    
-    localStorage.removeItem('token');
+
+    localStorage.removeItem("token");
     set({
       user: null,
       token: null,
@@ -89,9 +93,9 @@ const useAuthStore = create((set) => ({
     });
   },
 
-  //  ЗАГРУЗИТЬ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ 
+  //  ЗАГРУЗИТЬ ТЕКУЩЕГО ПОЛЬЗОВАТЕЛЯ
   loadUser: async () => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) {
       set({ isAuthenticated: false });
       return;
@@ -100,18 +104,18 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true });
     try {
       const data = await getMe();
-      
+
       // Подключаемся к SignalR
       signalRService.createConnection(token);
       await signalRService.start();
-      
+
       set({
         user: data.user,
         isAuthenticated: true,
         isLoading: false,
       });
     } catch {
-      localStorage.removeItem('token');
+      localStorage.removeItem("token");
       set({
         user: null,
         token: null,

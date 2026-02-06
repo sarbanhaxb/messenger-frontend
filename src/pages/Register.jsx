@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from "../store/authStore";
 
 export default function Register() {
@@ -30,7 +30,7 @@ export default function Register() {
     setLocalError("");
 
     // Валидация
-    if (!formData.password !== formData.confirmPassword) {
+    if (formData.password !== formData.confirmPassword) {
       setLocalError("Пароли не совпадают");
       return;
     }
@@ -105,7 +105,7 @@ export default function Register() {
               placeholder="Повторите пароль"
               value={formData.confirmPassword}
               onChange={handleChange}
-              step={styles.input}
+              style={styles.input}
               required
             />
           </div>

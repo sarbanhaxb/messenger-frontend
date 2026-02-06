@@ -1,11 +1,11 @@
 // Импортируем React хуки (функции для управления состоянием и эффектами)
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from 'react';
 // useParams — для получения параметров из URL (например, userId из /chat/:userId)
 // useNavigate — для программной навигации (переход на другие страницы)
-import { useParams, useNavigate } from "react-router-dom";
-import useAuthStore from "../store/authStore";
-import { getChatMessages, sendMessage, getUserProfile } from "../services/api";
-import signalRService from "../services/signalr";
+import { useParams, useNavigate } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
+import { getChatMessages, sendMessage, getUserProfile } from '../services/api';
+import signalRService from '../services/signalr';
 
 export default function ChatWindow() {
   const { userId } = useParams(); // Достает из URL параметр, введенный в фигурных скобках. В данном случае - это userId
