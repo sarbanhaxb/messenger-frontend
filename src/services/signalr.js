@@ -14,6 +14,7 @@ class SignalRService {
         accessTokenFactory: () => token,
       })
       .withAutomaticReconnect()
+      .configureLogging(signalR.LogLevel.Information)
       .build();
   }
 

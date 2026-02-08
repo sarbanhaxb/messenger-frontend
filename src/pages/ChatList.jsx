@@ -1,43 +1,79 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { useEffect, useState } from "react";
-import { getAllUsers } from "../services/api";
+import { getChats } from "../services/api";
 import signalRService from "../services/signalr";
+import "../styles/ChatList.css";
 
 export default function ChatList() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [users, setUsers] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
-  // Загружаем список пользователей
+  // Загрузка списка чатов
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchChats = async () => {
       try {
-        const data = await getAllUsers();
-        setUsers(data.users);
+        const data = await getChats();
+        setChats(data.chats);
         setLoading(false);
-      } catch {
-        setError("Ошибка загрузки пользователей");
+      } catch (err) {
+        console.error("Ошибка загрузки чатов:", err);
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchChats();
 
-    // Подписываемся на изменение статусов через SignalR
+    // Подписка на изменение статусов через SignalR
     signalRService.onUserStatusChange((data) => {
-      // Обновление статуса пользователя в списке
-      setUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.id === data.userId ? { ...u, status: data.status } : u,
+      // Обновление статуса пользователя в списке чатов
+      setChats((prevChats) =>
+        prevChats.map((chat) =>
+          chat.user.id === data.userId
+            ? { ...chat, user: { ...chat.user, status: data.status } }
+            : chat,
         ),
       );
     });
+
+    // Подписка на новые сообщения
+    signalRService.onReceiveMessage((message) => {
+      setChats((prevChats) => {
+        // Поиск чата с отправителем сообщения
+        const chatIndex = prevChats.findIndex(
+          (chat) => chat.user.id === message.senderId,
+        );
+
+        if (chatIndex !== -1) {
+          // Обновление существующего чата
+          const updatedChats = [...prevChats];
+          updatedChats[chatIndex] = {
+            ...updatedChats[chatIndex],
+            lastMessage: {
+              id: message.id,
+              text: message.text,
+              senderId: message.senderId,
+              createdAt: message.createdAt,
+              isRead: message.isRead,
+            },
+            updatedAt: message.createdAt,
+          };
+
+          // Сортировка чата по времени последнего сообщения
+          return updatedChats.sort(
+            (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
+          );
+        }
+
+        return prevChats;
+      });
+    });
   }, []);
 
-  // Открыть чат с пользовтаелем
+  // Открыть чат с пользователем
   const openChat = (userId) => {
     navigate(`/chat/${userId}`);
   };
@@ -48,212 +84,175 @@ export default function ChatList() {
     navigate("/login");
   };
 
+  // Форматирование времени
+  const formatTime = (timestamp) => {
+    if (!timestamp) return "";
+
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    // Если вчера
+    const diff = now - date;
+    if (diff < 86400000 * 2) {
+      return "вчера";
+    }
+
+    // Если в этом году - показываем дату без года
+
+    if (date.getFullYear() === now.getFullYear()) {
+      return date.toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "short",
+      });
+    }
+
+    // Иначе полная дата
+    return date.toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Получение preview последнего сообщения
+  const getMessagePreview = (chat) => {
+    if (!chat.lastMessage) {
+      return (
+        <span style={{ color: "var(--text-muted", fontStyle: "italic" }}>
+          Нет сообщений
+        </span>
+      );
+    }
+
+    const msg = chat.lastMessage;
+    const isMyMessage = msg.senderId === user?.id;
+    const prefix = isMyMessage ? "Вы: " : "";
+    const text =
+      msg.text.length > 35 ? msg.text.substring(0, 35) + "..." : msg.text;
+
+    return (
+      <>
+        {isMyMessage && (
+          <span style={{ color: "var(--primary-color)", marginRight: "4px" }}>
+            {msg.isRead ? "✓✓" : "✓"}
+          </span>
+        )}
+        <span style={{ color: "var(--text-secondary)" }}>
+          {prefix}
+          {text}
+        </span>
+      </>
+    );
+  };
+
+  // Фильтрация чатов по поиску
+  const filteredChats = chats.filter(
+    (chat) =>
+      chat.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <h2>Загрузка...</h2>
+      <div className="container">
+        <div className="sidebar">
+          <div style={{ padding: "40px", textAlign: "center" }}>
+            Загрузка...
+          </div>
+        </div>
       </div>
     );
   }
-
   return (
-    <div style={styles.container}>
-      {/* Шапка */}
-      <div style={styles.header}>
-        <h2 style={styles.headerTitle}>✌️💬Мессенджер</h2>
-        <div style={styles.userInfo}>
-          <span style={styles.userName}>👤 {user?.name}</span>
-          <button onClick={handleLogout} style={styles.logoutBtn}>
+    <div className="container">
+      {/* БОКОВАЯ ПАНЕЛЬ */}
+      <div className="sidebar slide-in">
+        {/* Шапка */}
+        <div className="sidebar-header">
+          <div className="user-info">
+            <div className="user-avatar">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600 }}>{user?.name}</div>
+              <div style={{ fontSize: "12px", opacity: 0.9 }}>
+                {user?.email}
+              </div>
+            </div>
+          </div>
+          <button onClick={handleLogout} className="logout-btn">
             Выйти
           </button>
         </div>
-      </div>
-      {/* Список пользователей */}
-      <div style={styles.content}>
-        <h3 style={styles.title}>Контакты ({users.length})</h3>
-        {error && <div style={styles.error}>{error}</div>}
 
-        {users.length === 0 ? (
-          <p style={styles.emptyText}>Нет доступных пользователей</p>
-        ) : (
-          <div style={styles.userList}>
-            {users.map((u) => (
+        {/* Поиск */}
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Поиск чатов..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Список чатов */}
+        <div className="chats-list">
+          {filteredChats.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">💬</div>
+              <div className="empty-state-text">
+                {chats.length === 0 ? "Нет активных чатов" : "Чатов не найдено"}
+              </div>
+              <div className="empty-state-subtext">
+                {chats.length === 0
+                  ? "Начните диалог с пользователем"
+                  : "Попробуйте изменить поисковый запрос"}
+              </div>
+            </div>
+          ) : (
+            filteredChats.map((chat) => (
               <div
-                key={u.id}
-                style={styles.userCard}
-                onClick={() => openChat(u.id)}
+                key={chat.chatId}
+                className="chat-item fade-in"
+                onClick={() => openChat(chat.user.id)}
               >
-                <div style={styles.avatar}>
-                  {u.avatar ? (
-                    <img src={u.avatar} alt={u.name} style={styles.avatarImg} />
+                <div className="chat-avatar">
+                  {chat.user.avatar ? (
+                    <img src={chat.user.avatar} alt={chat.user.name} />
                   ) : (
-                    <div style={styles.avatarPlaceholder}>
-                      {u.name.charAt(0).toUpperCase()}
-                    </div>
+                    chat.user.name.charAt(0).toUpperCase()
                   )}
-                </div>
-                <div style={styles.userInfoSection}>
-                  <div style={styles.userNameText}>{u.name}</div>
-                  <div style={styles.userEmail}>{u.email}</div>
-                  {u.position && (
-                    <div style={styles.userPosition}>{u.position}</div>
-                  )}
-                </div>
-                <div style={styles.statusContainer}>
                   <span
-                    style={{
-                      ...styles.statusDot,
-                      backgroundColor:
-                        u.status === "online" ? "#4caf50" : "#9e9e9e",
-                    }}
+                    className={`online-indicator ${
+                      chat.user.status === "online" ? "online" : "offline"
+                    }`}
                   />
-                  <span style={styles.statusText}>
-                    {u.status === "online" ? "Онлайн" : "Офлайн"}
-                  </span>
+                </div>
+
+                <div className="chat-info">
+                  <div className="chat-header">
+                    <span className="chat-name">{chat.user.name}</span>
+                    <span className="chat-time">
+                      {formatTime(chat.lastMessage?.createdAt)}
+                    </span>
+                  </div>
+                  <div className="chat-preview truncate">
+                    {getMessagePreview(chat)}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
 }
-const styles = {
-  container: {
-    minHeight: "100vh",
-    backgroundColor: "#f0f2f5",
-  },
-  loadingContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "100vh",
-  },
-  header: {
-    backgroundColor: "#667eea",
-    color: "white",
-    padding: "20px 30px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-  },
-  headerTitle: {
-    margin: 0,
-    fontSize: "24px",
-  },
-  userInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-  },
-  userName: {
-    fontSize: "16px",
-  },
-  logoutBtn: {
-    backgroundColor: "#ff5252",
-    color: "white",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    transition: "background 0.3s",
-  },
-  content: {
-    maxWidth: "900px",
-    margin: "0 auto",
-    padding: "30px 20px",
-  },
-  title: {
-    marginBottom: "25px",
-    color: "#333",
-    fontSize: "20px",
-  },
-  userList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
-  },
-  userCard: {
-    backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "12px",
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-    cursor: "pointer",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-    transition: "transform 0.2s, box-shadow 0.2s",
-  },
-  avatar: {
-    width: "60px",
-    height: "60px",
-    borderRadius: "50%",
-    overflow: "hidden",
-    flexShrink: 0,
-  },
-  avatarImg: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  avatarPlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#667eea",
-    color: "white",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    fontSize: "24px",
-    fontWeight: "bold",
-  },
-  userInfoSection: {
-    flex: 1,
-  },
-  userNameText: {
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: "5px",
-  },
-  userEmail: {
-    fontSize: "14px",
-    color: "#666",
-    marginBottom: "3px",
-  },
-  userPosition: {
-    fontSize: "13px",
-    color: "#999",
-  },
-  statusContainer: {
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  statusDot: {
-    width: "12px",
-    height: "12px",
-    borderRadius: "50%",
-  },
-  statusText: {
-    fontSize: "14px",
-    color: "#666",
-  },
-  error: {
-    backgroundColor: "#ffebee",
-    color: "#c62828",
-    padding: "15px",
-    borderRadius: "8px",
-    marginBottom: "20px",
-  },
-  emptyText: {
-    textAlign: "center",
-    color: "#999",
-    padding: "40px",
-    fontSize: "16px",
-  },
-};

@@ -1,60 +1,124 @@
-/* ============== ГЛОБАЛЬНЫЕ СТИЛИ ============== */
-
-/* Сброс стандартных отступов и настройка box-sizing */
+/* ============== СБРОС И БАЗОВЫЕ СТИЛИ ============== */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Глобальные стили для body */
+:root {
+  /* Цветовая схема Telegram */
+  --primary-color: #0088cc;
+  --primary-dark: #006699;
+  --secondary-color: #40a7e3;
+  
+  --background: #f4f4f5;
+  --sidebar-bg: #ffffff;
+  --chat-bg: #ffffff;
+  --message-bg: #f0f0f0;
+  --my-message-bg: #dcf8c6;
+  
+  --text-primary: #000000;
+  --text-secondary: #707579;
+  --text-muted: #999999;
+  
+  --border-color: #e5e5e5;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
+  --online-color: #4ecc5e;
+  --offline-color: #c4c9cc;
+  
+  --danger: #dc3545;
+  --success: #28a745;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f0f2f5;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+    'Helvetica Neue', Arial, sans-serif;
+  background: var(--background);
+  color: var(--text-primary);
+  overflow: hidden;
 }
 
-/* Стили для кода (если будем показывать код) */
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}
-
-/* Стили для кнопок при наведении */
-button:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Отключаем outline при фокусе (но оставляем для accessibility) */
-button:focus,
-input:focus {
-  outline: 2px solid #667eea;
-  outline-offset: 2px;
-}
-
-/* Плавные переходы для всех элементов */
-* {
-  transition: all 0.2s ease-in-out;
-}
-
-/* Скроллбар (для webkit браузеров: Chrome, Safari) */
+/* ============== СКРОЛЛБАР ============== */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
+  background: #c4c9cc;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #a0a0a0;
+}
+
+/* ============== УТИЛИТЫ ============== */
+.container {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.text-small {
+  font-size: 12px;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============== АНИМАЦИИ ============== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* ============== МЕДИА-ЗАПРОСЫ ============== */
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    z-index: 100;
+    width: 100% !important;
+  }
+  
+  .chat-window {
+    width: 100% !important;
+  }
 }

@@ -31,10 +31,10 @@ api.interceptors.request.use(
 
 //#region АВТОРИЗАЦИЯ
 
-// Регистрация
-export const register = async (name, email, password) => {
-    const response = await api.post('/auth/register', {name, email, password});
-    return response.data;
+// Регистрация. api - это экземпляр axios с настройками. Axios - это библиотека для выполнения запросов на сервер из Frontend.
+export const register = async (name, email, password) => { // export делает переменную доступной в других файлах
+    const response = await api.post('/auth/register', {name, email, password}); // api выполняет запрос на контроллер в Backend и получает оттуда результат
+    return response.data; 
 };
 
 // Вход
@@ -85,6 +85,12 @@ export const sendMessage = async (recipientId, text) => {
     const response = await api.post('/messages/send', { recipientId, text});
     return response.data;
 };
+
+// Получить список всех чатов с последними сообщениями
+export const getChats = async () => {
+    const response = await api.get('/chats');
+    return response.data;
+}
 
 export default api;
 //#endregion
