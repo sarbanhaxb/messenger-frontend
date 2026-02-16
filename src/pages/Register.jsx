@@ -76,7 +76,7 @@ export default function Register() {
             <input
               type="email"
               name="email"
-              placeholder="example@compant.com"
+              placeholder="example@company.com"
               value={formData.email}
               onChange={handleChange}
               style={styles.input}

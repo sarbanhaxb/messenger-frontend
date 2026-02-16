@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { getChats } from "../services/api";
+import { getChats, getAllUsers } from "../services/api";
 import signalRService from "../services/signalr";
 import "../styles/ChatList.css";
 
@@ -9,6 +9,7 @@ export default function ChatList() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [chats, setChats] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -16,8 +17,13 @@ export default function ChatList() {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const data = await getChats();
-        setChats(data.chats);
+        // Загрузка чатов
+        const chatsData = await getChats();
+        setChats(chatsData.chats);
+
+        // Загрузка всех пользователей
+        const usersData = await getAllUsers();
+        setAllUsers(usersData.users);
         setLoading(false);
       } catch (err) {
         console.error("Ошибка загрузки чатов:", err);
@@ -66,12 +72,13 @@ export default function ChatList() {
           return updatedChats.sort(
             (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
           );
+        } else{
+          fetchChats();
+          return prevChats;
         }
-
-        return prevChats;
       });
     });
-  }, []);
+  });
 
   // Открыть чат с пользователем
   const openChat = (userId) => {
@@ -153,10 +160,26 @@ export default function ChatList() {
   };
 
   // Фильтрация чатов по поиску
+  // Получаем ID пользователей, с которыми уже есть чаты
+  const userIdsWithChats = chats.map((chat) => chat.user.id);
+
+  // Фильтруем пользователей БЕЗ чатов
+  const usersWithoutChats = allUsers.filter(
+    (user) => !userIdsWithChats.includes(user.id),
+  );
+
+  // Фильтрация чатов по поиску
   const filteredChats = chats.filter(
     (chat) =>
       chat.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       chat.user.email.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  // Фильтрация пользователей без чатов по поиску
+  const filteredUsersWithoutChats = usersWithoutChats.filter(
+    (user) =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (loading) {
@@ -205,51 +228,115 @@ export default function ChatList() {
 
         {/* Список чатов */}
         <div className="chats-list">
-          {filteredChats.length === 0 ? (
+          {/* Если ничего не найдено */}
+          {filteredChats.length === 0 &&
+          filteredUsersWithoutChats.length === 0 ? (
             <div className="empty-state">
               <div className="empty-state-icon">💬</div>
               <div className="empty-state-text">
-                {chats.length === 0 ? "Нет активных чатов" : "Чатов не найдено"}
+                {chats.length === 0 && allUsers.length === 0
+                  ? "Нет пользователей"
+                  : "Ничего не найдено"}
               </div>
               <div className="empty-state-subtext">
-                {chats.length === 0
-                  ? "Начните диалог с пользователем"
-                  : "Попробуйте изменить поисковый запрос"}
+                Попробуйте изменить поисковый запрос
               </div>
             </div>
           ) : (
-            filteredChats.map((chat) => (
-              <div
-                key={chat.chatId}
-                className="chat-item fade-in"
-                onClick={() => openChat(chat.user.id)}
-              >
-                <div className="chat-avatar">
-                  {chat.user.avatar ? (
-                    <img src={chat.user.avatar} alt={chat.user.name} />
-                  ) : (
-                    chat.user.name.charAt(0).toUpperCase()
-                  )}
-                  <span
-                    className={`online-indicator ${
-                      chat.user.status === "online" ? "online" : "offline"
-                    }`}
-                  />
-                </div>
+            <>
+              {/* СЕКЦИЯ 1: ЧАТЫ (с историей сообщений) */}
+              {filteredChats.length > 0 && (
+                <>
+                  {filteredChats.map((chat) => (
+                    <div
+                      key={chat.chatId}
+                      className="chat-item fade-in"
+                      onClick={() => openChat(chat.user.id)}
+                    >
+                      <div className="chat-avatar">
+                        {chat.user.avatar ? (
+                          <img src={chat.user.avatar} alt={chat.user.name} />
+                        ) : (
+                          chat.user.name.charAt(0).toUpperCase()
+                        )}
+                        <span
+                          className={`online-indicator ${
+                            chat.user.status === "online" ? "online" : "offline"
+                          }`}
+                        />
+                      </div>
 
-                <div className="chat-info">
-                  <div className="chat-header">
-                    <span className="chat-name">{chat.user.name}</span>
-                    <span className="chat-time">
-                      {formatTime(chat.lastMessage?.createdAt)}
-                    </span>
+                      <div className="chat-info">
+                        <div className="chat-header">
+                          <span className="chat-name">{chat.user.name}</span>
+                          <span className="chat-time">
+                            {formatTime(chat.lastMessage?.createdAt)}
+                          </span>
+                        </div>
+                        <div className="chat-preview truncate">
+                          {getMessagePreview(chat)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Разделитель между чатами и контактами */}
+                  {filteredUsersWithoutChats.length > 0 && (
+                    <div
+                      style={{
+                        padding: "10px 15px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      Все контакты
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* СЕКЦИЯ 2: ПОЛЬЗОВАТЕЛИ БЕЗ ЧАТОВ */}
+              {filteredUsersWithoutChats.map((user) => (
+                <div
+                  key={user.id}
+                  className="chat-item fade-in"
+                  onClick={() => openChat(user.id)}
+                >
+                  <div className="chat-avatar">
+                    {user.avatar ? (
+                      <img src={user.avatar} alt={user.name} />
+                    ) : (
+                      user.name.charAt(0).toUpperCase()
+                    )}
+                    <span
+                      className={`online-indicator ${
+                        user.status === "online" ? "online" : "offline"
+                      }`}
+                    />
                   </div>
-                  <div className="chat-preview truncate">
-                    {getMessagePreview(chat)}
+
+                  <div className="chat-info">
+                    <div className="chat-header">
+                      <span className="chat-name">{user.name}</span>
+                    </div>
+                    <div className="chat-preview truncate">
+                      {user.status === "online" ? (
+                        <span style={{ color: "var(--online-color)" }}>
+                          ● онлайн
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--text-muted)" }}>
+                          Нажмите, чтобы написать
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </>
           )}
         </div>
       </div>

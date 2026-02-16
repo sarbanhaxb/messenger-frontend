@@ -203,14 +203,33 @@ export default function ChatWindow() {
               <div
                 key={msg.id}
                 style={{
-                  ...styles.messageBubble,
-                  backgroundColor: isMyMessage ? "#667eea" : "#e9ecef",
-                  color: isMyMessage ? "white" : "#333",
+                  ...styles.messageWrapper, // ← Обёртка с flex
+                  justifyContent: isMyMessage ? "flex-end" : "flex-start", // ← Выравнивание СЮДА!
+                  marginBottom: "12px", // Отступы между сообщениями
                 }}
               >
-                <div style={styles.messageText}>{msg.text}</div>
-                <div style={styles.messageTime}>
-                  {formatTime(msg.createdAt)}
+                <div
+                  style={{
+                    ...styles.messageBubble,
+                    backgroundColor: isMyMessage ? "#667eea" : "#e9ecef",
+                    color: isMyMessage ? "white" : "#333",
+                    maxWidth: "70%", // Не растягивается на всю ширину
+                    borderTopLeftRadius: isMyMessage ? "18px" : "4px", // Углы пузыря
+                    borderTopRightRadius: isMyMessage ? "4px" : "18px",
+                    borderBottomLeftRadius: "18px",
+                    borderBottomRightRadius: "18px",
+                  }}
+                >
+                  <div style={styles.messageText}>{msg.text}</div>
+                  <div
+                    style={{
+                      ...styles.messageTime,
+                      textAlign: isMyMessage ? "right" : "left", // Время справа/слева
+                      marginTop: "4px",
+                    }}
+                  >
+                    {formatTime(msg.createdAt)}
+                  </div>
                 </div>
               </div>
             );
@@ -333,22 +352,24 @@ const styles = {
   },
   messageWrapper: {
     display: "flex",
-    // justifyContent будет установлен динамически
+    width: "100%",
+    marginBottom: "8px", // Отступ между сообщениями
   },
   messageBubble: {
-    maxWidth: "60%",
-    padding: "12px 16px",
-    borderRadius: "15px",
-    boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
+    maxWidth: "70%",
+    padding: "10px 14px",
+    borderRadius: "18px",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.12)",
+    position: "relative",
   },
   messageText: {
     fontSize: "15px",
-    lineHeight: "1.5",
-    wordWrap: "break-word", // Перенос длинных слов
+    lineHeight: "1.4",
+    wordWrap: "break-word",
+    marginBottom: "2px",
   },
   messageTime: {
     fontSize: "11px",
-    marginTop: "5px",
     opacity: 0.7,
   },
   typingIndicator: {
