@@ -1,0 +1,82 @@
+/* Контейнер чатов */
+.chats-container {
+  display: flex;
+  height: 100vh;
+  background: var(--background);
+  overflow: hidden;
+}
+
+/* Левая панель - список чатов */
+.chats-sidebar {
+  width: 420px;
+  min-width: 320px;
+  max-width: 500px;
+  border-right: 1px solid var(--border-color);
+  background: var(--sidebar-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Правая панель - окно чата */
+.chats-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-bg);
+}
+
+/* Пустое состояние (когда чат не выбран) */
+.chats-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(0, 0, 0, 0.02) 10px,
+      rgba(0, 0, 0, 0.02) 20px
+    );
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px;
+}
+
+.empty-state h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+  .chats-sidebar {
+    width: 100%;
+    max-width: none;
+    border-right: none;
+  }
+
+  .chats-main {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+  }
+
+  /* Скрыть sidebar когда открыт чат */
+  .chats-container:has(.chats-main:not(.chats-empty)) .chats-sidebar {
+    display: none;
+  }
+}

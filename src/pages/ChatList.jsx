@@ -5,7 +5,7 @@ import { getChats, getAllUsers } from "../services/api";
 import signalRService from "../services/signalr";
 import "../styles/ChatList.css";
 
-export default function ChatList() {
+export default function ChatList({ onSelectChat, selectedUserId }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [chats, setChats] = useState([]);
@@ -72,7 +72,7 @@ export default function ChatList() {
           return updatedChats.sort(
             (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt),
           );
-        } else{
+        } else {
           fetchChats();
           return prevChats;
         }
@@ -82,7 +82,8 @@ export default function ChatList() {
 
   // Открыть чат с пользователем
   const openChat = (userId) => {
-    navigate(`/chat/${userId}`);
+    onSelectChat(userId);
+    // navigate(`/chat/${userId}`);
   };
 
   // Выход из системы
@@ -250,7 +251,8 @@ export default function ChatList() {
                   {filteredChats.map((chat) => (
                     <div
                       key={chat.chatId}
-                      className="chat-item fade-in"
+                      className={`chat-item ${selectedUserId === chat.user.ud ? "active" : ""}`}
+                      // className="chat-item fade-in"
                       onClick={() => openChat(chat.user.id)}
                     >
                       <div className="chat-avatar">

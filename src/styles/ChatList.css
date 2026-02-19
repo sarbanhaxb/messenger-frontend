@@ -220,3 +220,10 @@
   font-size: 14px;
   opacity: 0.7;
 }
+.chat-item.active {
+  background: #2b5278;
+}
+
+.chat-item.active:hover {
+  background: #2b5278;
+}

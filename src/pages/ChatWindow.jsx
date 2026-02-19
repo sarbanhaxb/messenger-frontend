@@ -2,14 +2,16 @@
 import { useEffect, useState, useRef } from "react";
 // useParams — для получения параметров из URL (например, userId из /chat/:userId)
 // useNavigate — для программной навигации (переход на другие страницы)
-import { useParams, useNavigate } from "react-router-dom";
+// import { useParams, useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { getChatMessages, sendMessage, getUserProfile } from "../services/api";
 import signalRService from "../services/signalr";
 
-export default function ChatWindow() {
-  const { userId } = useParams(); // Достает из URL параметр, введенный в фигурных скобках. В данном случае - это userId
-  const navigate = useNavigate(); // Для перехода на другую страницу
+export default function ChatWindow({ userId }) {
+  console.log("🔥 ChatWindow рендерится, userId:", userId);
+  // const { userId } = useParams(); // Достает из URL параметр, введенный в фигурных скобках. В данном случае - это userId
+  // const navigate = useNavigate(); // Для перехода на другую страницу
   const { user } = useAuthStore(); // Достает текущего пользователя из глобального хранилища
 
   //#region Локальное состояние компонента
@@ -44,6 +46,19 @@ export default function ChatWindow() {
         // Загрузка истории сообщений с этим пользователем
         const messageData = await getChatMessages(userId);
         setMessages(messageData.messages);
+
+        // После строки setMessages(messageData.messages);
+        console.log("=== ОТЛАДКА СООБЩЕНИЙ ===");
+        console.log("Всего сообщений:", messageData.messages.length);
+        messageData.messages.forEach((msg, i) => {
+          console.log(`Сообщение ${i}:`, {
+            id: msg.id,
+            createdAt: msg.createdAt,
+            createdAt_type: typeof msg.createdAt,
+            createdAt_parsed: new Date(msg.createdAt),
+            text: msg.text.slice(0, 50) + "...",
+          });
+        });
 
         //Отключение индикатора загрузки
         setLoading(false);
@@ -139,9 +154,25 @@ export default function ChatWindow() {
 
   //#region Форматирование времени
   const formatTime = (date) => {
-    const d = new Date(date);
+    if (!date) return "";
 
-    return d.toLocaleDateString("ru-RU", {
+    // Универсальный парсинг
+    let d;
+    if (typeof date === "string") {
+      // Добавляем Z если нет
+      if (date.includes("T") && !date.endsWith("Z")) {
+        d = new Date(date + "Z");
+      } else {
+        d = new Date(date);
+      }
+    } else {
+      d = new Date(date);
+    }
+
+    // Если дата невалидная - показываем пустую строку
+    if (isNaN(d.getTime())) return "";
+
+    return d.toLocaleString("ru-RU", {
       hour: "2-digit",
       minute: "2-digit",
     });
@@ -164,9 +195,6 @@ export default function ChatWindow() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <button onClick={() => navigate("/chats")} style={styles.backBtn}>
-          🔙Назад
-        </button>
         <div style={styles.recipientInfo}>
           <div style={styles.avatarSmall}>
             {recipient?.avatar ? (

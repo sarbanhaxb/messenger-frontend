@@ -9,8 +9,10 @@ import useAuthStore from "./store/authStore";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import ChatList from "./pages/ChatList";
-import ChatWindow from "./pages/ChatWindow";
+import Chats from "./pages/Chats";
+import "./App.css";
+// import ChatList from "./pages/ChatList";
+// import ChatWindow from "./pages/ChatWindow";
 
 // BrowserRouter - обертка для маршрутизации
 // Routes - контейнер для всех Route
@@ -29,15 +31,9 @@ function App() {
   //#region Индикатор загрузки
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <h2>Загрузка...</h2>
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Загрузка...</p>
       </div>
     );
   }
@@ -46,40 +42,63 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* Публичные маршруты*/}
-        {/*Если пользователь авторизован, то перенаправляет на /chats */}
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/chats" /> : <Login />}
+          element={!isAuthenticated ? <Login /> : <Navigate to="/chats" />}
         />
         <Route
           path="/register"
-          element={isAuthenticated ? <Navigate to="/chats" /> : <Register />}
+          element={!isAuthenticated ? <Register /> : <Navigate to="/chats" />}
         />
 
-        {/* Защищеные маршруты*/}
-        {/* Если не авторизован, перенаправляется на /login */}
         <Route
-          path="/chats"
-          element={isAuthenticated ? <ChatList /> : <Navigate to="/login" />}
+          path="/chats/:userId?"
+          element={isAuthenticated ? <Chats /> : <Navigate to="/login" />}
         />
-
-        {/* :userId - динамический параметр (получаем через useParams) */}
-        <Route
-          path="/chat/:userId"
-          element={isAuthenticated ? <ChatWindow /> : <Navigate to="/login" />}
-        />
-
-        {/* Дефолтный маршрут */}
-        {/* Если URL = /, перенаправляет в зависимости от авторизации */}
         <Route
           path="/"
           element={<Navigate to={isAuthenticated ? "/chats" : "/login"} />}
         />
-        {/* Если маршрут не найден, перенаправляет на главную */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
+
+    // <Router>
+    //   <Routes>
+    //     {/* Публичные маршруты*/}
+    //     {/*Если пользователь авторизован, то перенаправляет на /chats */}
+    //     <Route
+    //       path="/login"
+    //       element={isAuthenticated ? <Navigate to="/chats" /> : <Login />}
+    //     />
+    //     <Route
+    //       path="/register"
+    //       element={isAuthenticated ? <Navigate to="/chats" /> : <Register />}
+    //     />
+
+    //     {/* Защищеные маршруты*/}
+    //     {/* Если не авторизован, перенаправляется на /login */}
+    //     <Route
+    //       path="/chats"
+    //       element={isAuthenticated ? <ChatList /> : <Navigate to="/login" />}
+    //     />
+
+    //     {/* :userId - динамический параметр (получаем через useParams) */}
+    //     <Route
+    //       path="/chat/:userId"
+    //       element={isAuthenticated ? <ChatWindow /> : <Navigate to="/login" />}
+    //     />
+
+    //     {/* Дефолтный маршрут */}
+    //     {/* Если URL = /, перенаправляет в зависимости от авторизации */}
+    //     <Route
+    //       path="/"
+    //       element={<Navigate to={isAuthenticated ? "/chats" : "/login"} />}
+    //     />
+    //     {/* Если маршрут не найден, перенаправляет на главную */}
+    //     <Route path="*" element={<Navigate to="/" />} />
+    //   </Routes>
+    // </Router>
   );
   //#endregion
 }
