@@ -11,7 +11,7 @@
 /* ============== ШАПКА БОКОВОЙ ПАНЕЛИ ============== */
 .sidebar-header {
   padding: 20px;
-  background: var(--primary-color);
+  background: #667eea;
   color: white;
   display: flex;
   justify-content: space-between;

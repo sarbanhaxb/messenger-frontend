@@ -16,7 +16,7 @@ export default function Chats() {
   return (
     <div className="chats-container">
       {/* Левая панель - список чатов */}
-      <div className="chats-sidebar">
+      <div className="chats-sidebar" style={{width: "Auto", background: "black"}}>
         <ChatList onSelectChat={handleSelectChat} selectedUserId={userId} />
       </div>
 

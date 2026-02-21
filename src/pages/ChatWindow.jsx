@@ -172,10 +172,23 @@ export default function ChatWindow({ userId }) {
     // Если дата невалидная - показываем пустую строку
     if (isNaN(d.getTime())) return "";
 
-    return d.toLocaleString("ru-RU", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const now = new Date();
+
+    if (d.getDay() == now.getDay()) {
+      console.log(now.day);
+      return d.toLocaleString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } else {
+      return d.toLocaleString("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+      });
+    }
   };
 
   //#endregion
@@ -305,6 +318,7 @@ const styles = {
     flexDirection: "column", // Элементы расположены вертикально
     height: "100vh", // 100% высоты экрана
     backgroundColor: "#f0f2f5",
+    
   },
   loadingContainer: {
     display: "flex",

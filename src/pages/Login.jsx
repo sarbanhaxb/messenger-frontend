@@ -71,6 +71,8 @@ export default function Login() {
           <Link to="/register" style={styles.linkText}>
             Зарегистрироваться
           </Link>
+          <br />
+          <Link to="/forgot-password">Забыли пароль?</Link>
         </p>
       </div>
     </div>

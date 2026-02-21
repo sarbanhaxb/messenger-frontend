@@ -11,6 +11,8 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Chats from "./pages/Chats";
 import "./App.css";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 // import ChatList from "./pages/ChatList";
 // import ChatWindow from "./pages/ChatWindow";
 
@@ -55,6 +57,8 @@ function App() {
           path="/chats/:userId?"
           element={isAuthenticated ? <Chats /> : <Navigate to="/login" />}
         />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           path="/"
           element={<Navigate to={isAuthenticated ? "/chats" : "/login"} />}
@@ -62,43 +66,6 @@ function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
-
-    // <Router>
-    //   <Routes>
-    //     {/* Публичные маршруты*/}
-    //     {/*Если пользователь авторизован, то перенаправляет на /chats */}
-    //     <Route
-    //       path="/login"
-    //       element={isAuthenticated ? <Navigate to="/chats" /> : <Login />}
-    //     />
-    //     <Route
-    //       path="/register"
-    //       element={isAuthenticated ? <Navigate to="/chats" /> : <Register />}
-    //     />
-
-    //     {/* Защищеные маршруты*/}
-    //     {/* Если не авторизован, перенаправляется на /login */}
-    //     <Route
-    //       path="/chats"
-    //       element={isAuthenticated ? <ChatList /> : <Navigate to="/login" />}
-    //     />
-
-    //     {/* :userId - динамический параметр (получаем через useParams) */}
-    //     <Route
-    //       path="/chat/:userId"
-    //       element={isAuthenticated ? <ChatWindow /> : <Navigate to="/login" />}
-    //     />
-
-    //     {/* Дефолтный маршрут */}
-    //     {/* Если URL = /, перенаправляет в зависимости от авторизации */}
-    //     <Route
-    //       path="/"
-    //       element={<Navigate to={isAuthenticated ? "/chats" : "/login"} />}
-    //     />
-    //     {/* Если маршрут не найден, перенаправляет на главную */}
-    //     <Route path="*" element={<Navigate to="/" />} />
-    //   </Routes>
-    // </Router>
   );
   //#endregion
 }
