@@ -13,8 +13,7 @@ import Chats from "./pages/Chats";
 import "./App.css";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-// import ChatList from "./pages/ChatList";
-// import ChatWindow from "./pages/ChatWindow";
+
 
 // BrowserRouter - обертка для маршрутизации
 // Routes - контейнер для всех Route

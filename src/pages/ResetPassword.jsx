@@ -9,7 +9,6 @@ export default function ResetPassword() {
   const urlToken = searchParams.get("token") || "";
   const email = decodeURIComponent(searchParams.get("email") || "");
 
-  console.log("🔍 URL TOKEN:", urlToken.substring(0, 20)); // FjlLFsZs5S6L...
 
   const [formData, setFormData] = useState({
     email: email,
@@ -22,7 +21,6 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    console.log("📤 ОТПРАВЛЯЕМ:", formData); // Проверьте токен!
     try {
       const result = await resetPassword(formData);
       setMessage(result.message);

@@ -109,5 +109,15 @@ export const getChats = async () => {
   return response.data;
 };
 
+// Метод редактирования сообщения
+export const updateMessage = async (messageId, text) => {
+  const response = await api.put(`/messages/${messageId}`, { text });
+  return response.data;
+};
+
+// Удаление сообщения
+export const deleteMessage = (messageId) =>
+  api.delete(`/messages/${messageId}`);
+
 export default api;
 //#endregion

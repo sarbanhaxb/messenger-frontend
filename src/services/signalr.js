@@ -23,7 +23,6 @@ class SignalRService {
     if (this.connection) {
       try {
         await this.connection.start();
-        console.log("SignalR подключен");
       } catch (err) {
         console.error("Ошибка подключения SignalR:", err);
       }
@@ -34,7 +33,6 @@ class SignalRService {
   async stop() {
     if (this.connection) {
       await this.connection.stop();
-      console.log("SignalR отключен");
     }
   }
 

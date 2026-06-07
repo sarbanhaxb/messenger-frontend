@@ -1,17 +1,18 @@
-// Импортируем React хуки (функции для управления состоянием и эффектами)
+// Импорт React хуки (функции для управления состоянием и эффектами)
 import { useEffect, useState, useRef } from "react";
 // useParams — для получения параметров из URL (например, userId из /chat/:userId)
 // useNavigate — для программной навигации (переход на другие страницы)
-// import { useParams, useNavigate } from "react-router-dom";
-// import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { getChatMessages, sendMessage, getUserProfile } from "../services/api";
+import {
+  getChatMessages,
+  sendMessage,
+  getUserProfile,
+  updateMessage,
+  deleteMessage as deleteMessageApi,
+} from "../services/api";
 import signalRService from "../services/signalr";
 
 export default function ChatWindow({ userId }) {
-  console.log("🔥 ChatWindow рендерится, userId:", userId);
-  // const { userId } = useParams(); // Достает из URL параметр, введенный в фигурных скобках. В данном случае - это userId
-  // const navigate = useNavigate(); // Для перехода на другую страницу
   const { user } = useAuthStore(); // Достает текущего пользователя из глобального хранилища
 
   //#region Локальное состояние компонента
@@ -31,6 +32,108 @@ export default function ChatWindow({ userId }) {
 
   const typingTimeout = useRef(null); // Для debounce индикатора печати
 
+  const [contextMenu, setContextMenu] = useState(null); // {x, y, messageId}
+  const [editingMessage, setEditingMessage] = useState(null);
+  const [editText, setEditText] = useState("");
+
+  const groupMessagesByDate = (messages) => {
+    const groups = [];
+    const dates = new Set();
+
+    messages.forEach((message) => {
+      const messageDate = new Date(message.createdAt);
+      const dateKey = messageDate.toLocaleDateString("ru-RU", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+
+      const now = new Date();
+      const diffDays = Math.floor((now - messageDate) / (1000 * 60 * 60 * 24));
+
+      let displayDate = dateKey;
+      if (diffDays === 0) displayDate = "Сегодня";
+      else if (diffDays === 1) displayDate = "Вчера";
+
+      if (!dates.has(dateKey)) {
+        dates.add(dateKey);
+        groups.push({ type: "date", date: displayDate, key: dateKey });
+      }
+
+      groups.push({ type: "message", data: message });
+    });
+
+    return groups;
+  };
+
+  const startEditing = (message) => {
+    setEditingMessage(message);
+    setEditText(message.text);
+  };
+
+  const saveEdit = async () => {
+    if (!editingMessage || !editText.trim()) return;
+
+    try {
+      const result = await updateMessage(editingMessage.id, editText);
+
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === editingMessage.id ? result.data : msg)),
+      );
+
+      setEditingMessage(null);
+      setEditText("");
+    } catch (err) {
+      console.error("Ошибка редактирования:", err);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingMessage(null);
+    setEditText("");
+  };
+
+  const handleContextMenu = (e, message) => {
+    e.preventDefault(); // Отключение стандартного контекстного меню браузера
+
+    const messageDate = new Date(message.createdAt);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const isToday = messageDate >= today;
+    const isMyMessage = message.senderId === user.id;
+
+    if (!isMyMessage || !isToday) return;
+
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      messageId: message.id,
+      message: message,
+    });
+  };
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleEditFromMenu = () => {
+    if (contextMenu?.message) {
+      startEditing(contextMenu.message);
+      closeContextMenu();
+    }
+  };
+
+  const deleteMessage = async (messageId) => {
+    try {
+      await deleteMessageApi(messageId);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      closeContextMenu();
+    } catch (err) {
+      console.error("Ошибка удаления:", err);
+      alert("Ошибка удаления сообщения");
+    }
+  };
+
   //#endregion
 
   //#region загрузка данных при открытии чата
@@ -47,23 +150,9 @@ export default function ChatWindow({ userId }) {
         const messageData = await getChatMessages(userId);
         setMessages(messageData.messages);
 
-        // После строки setMessages(messageData.messages);
-        console.log("=== ОТЛАДКА СООБЩЕНИЙ ===");
-        console.log("Всего сообщений:", messageData.messages.length);
-        messageData.messages.forEach((msg, i) => {
-          console.log(`Сообщение ${i}:`, {
-            id: msg.id,
-            createdAt: msg.createdAt,
-            createdAt_type: typeof msg.createdAt,
-            createdAt_parsed: new Date(msg.createdAt),
-            text: msg.text.slice(0, 50) + "...",
-          });
-        });
-
         //Отключение индикатора загрузки
         setLoading(false);
-      } catch (err) {
-        console.error("Ошибка загрузки данных:", err);
+      } catch {
         setLoading(false);
       }
     };
@@ -102,7 +191,7 @@ export default function ChatWindow({ userId }) {
   }, [userId]);
   //#endregion
 
-  //#region Автоскролл вниз при новых сообщениях
+  //#region Автоскролл вниз при новых сообщениях и иные обработчки
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -110,6 +199,16 @@ export default function ChatWindow({ userId }) {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const handleClickOutside = () => {
+      closeContextMenu();
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
   //#endregion
 
   //#region Отправка сообщения
@@ -175,7 +274,6 @@ export default function ChatWindow({ userId }) {
     const now = new Date();
 
     if (d.getDay() == now.getDay()) {
-      console.log(now.day);
       return d.toLocaleString("ru-RU", {
         hour: "2-digit",
         minute: "2-digit",
@@ -237,49 +335,205 @@ export default function ChatWindow({ userId }) {
             <p>Начните диалог с {recipient?.name}</p>
           </div>
         ) : (
-          messages.map((msg) => {
-            const isMyMessage = msg.senderId === user.id;
-
-            return (
-              <div
-                key={msg.id}
-                style={{
-                  ...styles.messageWrapper, // ← Обёртка с flex
-                  justifyContent: isMyMessage ? "flex-end" : "flex-start", // ← Выравнивание СЮДА!
-                  marginBottom: "12px", // Отступы между сообщениями
-                }}
-              >
+          (() => {
+            const groupedMessages = groupMessagesByDate(messages);
+            return groupedMessages.map((item) =>
+              item.type === "date" ? (
+                // 🔥 РАЗДЕЛИТЕЛЬ ДАТЫ
                 <div
+                  key={item.key}
                   style={{
-                    ...styles.messageBubble,
-                    backgroundColor: isMyMessage ? "#667eea" : "#e9ecef",
-                    color: isMyMessage ? "white" : "#333",
-                    maxWidth: "70%", // Не растягивается на всю ширину
-                    borderTopLeftRadius: isMyMessage ? "18px" : "4px", // Углы пузыря
-                    borderTopRightRadius: isMyMessage ? "4px" : "18px",
-                    borderBottomLeftRadius: "18px",
-                    borderBottomRightRadius: "18px",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    margin: "20px 0",
+                    width: "100%",
                   }}
                 >
-                  <div style={styles.messageText}>{msg.text}</div>
                   <div
                     style={{
-                      ...styles.messageTime,
-                      textAlign: isMyMessage ? "right" : "left", // Время справа/слева
-                      marginTop: "4px",
+                      backgroundColor: "#e5e5e5",
+                      color: "#666",
+                      padding: "8px 16px",
+                      borderRadius: "20px",
+                      fontSize: "12px",
+                      fontWeight: "500",
                     }}
                   >
-                    {formatTime(msg.createdAt)}
+                    {item.date}
                   </div>
                 </div>
-              </div>
+              ) : (
+                (() => {
+                  const msg = item.data;
+                  const isMyMessage = msg.senderId === user.id;
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        ...styles.messageWrapper,
+                        justifyContent: isMyMessage ? "flex-end" : "flex-start",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      {editingMessage?.id === msg.id ? (
+                        // РЕЖИМ РЕДАКТИРОВАНИЯ
+                        <div
+                          style={{
+                            ...styles.messageBubble,
+                            maxWidth: "70%",
+                            backgroundColor: "#fff3cd",
+                            border: "2px solid #ffc107",
+                          }}
+                        >
+                          <textarea
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            style={{
+                              width: "100%",
+                              minHeight: "40px",
+                              border: "1px solid #ddd",
+                              borderRadius: "8px",
+                              padding: "8px",
+                              resize: "vertical",
+                              fontSize: "15px",
+                              fontFamily: "inherit",
+                              outline: "none",
+                            }}
+                            autoFocus
+                          />
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              marginTop: "8px",
+                            }}
+                          >
+                            <button
+                              onClick={saveEdit}
+                              style={{
+                                background: "#28a745",
+                                color: "white",
+                                border: "none",
+                                padding: "4px 12px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                cursor: "pointer",
+                                flex: 1,
+                              }}
+                            >
+                              ✅ Сохранить
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              style={{
+                                background: "#6c757d",
+                                color: "white",
+                                border: "none",
+                                padding: "4px 12px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                cursor: "pointer",
+                              }}
+                            >
+                              ❌ Отмена
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // 🔥 ОБЫЧНОЕ СООБЩЕНИЕ
+                        <div
+                          style={{
+                            ...styles.messageBubble,
+                            backgroundColor: isMyMessage
+                              ? "#667eea"
+                              : "#e9ecef",
+                            color: isMyMessage ? "white" : "#333",
+                            maxWidth: "70%",
+                            borderTopLeftRadius: isMyMessage ? "18px" : "4px",
+                            borderTopRightRadius: isMyMessage ? "4px" : "18px",
+                            borderBottomLeftRadius: "18px",
+                            borderBottomRightRadius: "18px",
+                          }}
+                          onContextMenu={(e) => handleContextMenu(e, msg)}
+                        >
+                          <div style={styles.messageText}>{msg.text}</div>
+
+                          {/* 🔥 НОВЫЙ ФУТЕР */}
+
+                          <div>
+                            <div
+                              style={{
+                                ...styles.messageTime,
+                                textAlign: isMyMessage ? "right" : "left",
+                                marginTop: "4px",
+                                display: "flex",
+                                justifyContent: isMyMessage
+                                  ? "flex-end"
+                                  : "flex-start",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
+                              <span style={{ fontSize: "11px" }}>
+                                {formatTime(msg.createdAt)}
+                              </span>
+
+                              {msg.isEdited && (
+                                <span
+                                  style={{
+                                    fontSize: "10px",
+                                    color: isMyMessage
+                                      ? "rgba(255,255,255,0.6)"
+                                      : "rgba(0,0,0,0.5)",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  отр. {formatTime(msg.editedAt)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ),
             );
-          })
+          })()
         )}
 
         {isTyping && (
           <div style={styles.typingIndicator}>
             {recipient?.name} печатает...
+          </div>
+        )}
+
+        {contextMenu && (
+          <div
+            style={{
+              position: "fixed",
+              left: `${contextMenu.x}px`,
+              top: `${contextMenu.y}px`,
+              background: "white",
+              border: "1px solid #ddd",
+              borderRadius: "8px",
+              boxShadow: "0 8px 25px rgba(0,0,0,0.15)",
+              padding: 0,
+              zIndex: 10000,
+              minWidth: "160px",
+            }}
+          >
+            <button onClick={handleEditFromMenu} style={styles.menuButtonStyle}>
+              ✏️ Редактировать
+            </button>
+            <button
+              onClick={() => deleteMessage(contextMenu.messageId)}
+              style={styles.menuButtonStyle}
+            >
+              🗑️ Удалить
+            </button>
           </div>
         )}
 
@@ -313,12 +567,23 @@ export default function ChatWindow({ userId }) {
 
 //#region Стили
 const styles = {
+  menuButtonStyle: {
+    display: "block",
+    width: "100%",
+    padding: "12px 16px",
+    background: "none",
+    border: "none",
+    textAlign: "left",
+    fontSize: "14px",
+    cursor: "pointer",
+    color: "#333",
+  },
+
   container: {
     display: "flex",
     flexDirection: "column", // Элементы расположены вертикально
     height: "100vh", // 100% высоты экрана
     backgroundColor: "#f0f2f5",
-    
   },
   loadingContainer: {
     display: "flex",
@@ -445,6 +710,21 @@ const styles = {
     fontSize: "15px",
     fontWeight: "bold",
     transition: "background 0.3s",
+  },
+  dateSeparator: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: "20px 0",
+    width: "100%",
+  },
+  dateLabel: {
+    backgroundColor: "#e5e5e5",
+    color: "#666",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "500",
   },
 };
 //#endregion
